@@ -1,36 +1,10 @@
 /* PROC to pull CIH utilization and create consolidated visits table (pre-CIH exclusions) */
-/* updated 06/22/2022 | Claire Chen */
-
-use [OPCCCT_CIH];
-go
-
-drop proc if exists dflt.pull_VA_CIH_visits;
-go
-create proc dflt.pull_VA_CIH_visits (
-	@CIHType varchar(25) = 'Acupuncture', -- to be updated by user
-	@CIHType1 varchar(25) = '', -- leave as default value (will be updated by proc if CIHType is Acupuncture)
-	@CIHType2 varchar(25) = '', -- leave as default value (will be updated by proc if CIHType is Acupuncture)
-	@StartDateTime varchar(25),
-	@EndDateTime varchar(25)
-	)
-AS
-BEGIN
-
-IF @CIHType in ('Acupuncture') 
-BEGIN
-	SET @CIHType1 = 'Acup-Trad'
-	SET @CIHType2 = 'Acup-BFA'
-END
-
-print @CIHType;
-print @CIHType1;
-print @CIHType2;
-
-end
-
-print 'hi';
-
-/*** limit CDWWork.Outpat.Visit to specified date range ***/
+/* updated 08/04/2026. Code originally provided by Jamie Douglas at the VA*/
+DECLARE @CIHType varchar(25) = 'Acupuncture';
+DECLARE @StartDateTime varchar(25) = '2017-10-01';
+DECLARE @EndDateTime varchar(25) = '2020-09-30';
+DECLARE @CIHType1 varchar(25) = 'Acup-Trad';
+DECLARE	@CIHType2 varchar(25) = 'Acup-BFA';
 
 DROP TABLE IF EXISTS #outpat_visit;
 SELECT DISTINCT A.VisitSID
@@ -41,9 +15,7 @@ SELECT DISTINCT A.VisitSID
 	, B.Sta6a
 	, A.VisitDateTime
 INTO #outpat_visit
-FROM [Src].[Outpat_Visit] A
-	inner join [ORD_Fix_202309007D].[Dflt].[CohortForJamie] coh--narrow to cohort patients
-		on a.patientsid=coh.patientsid --narrow to cohort patients
+FROM [CDWWork].[Outpat].[Visit] A
 	LEFT JOIN CDWWork.Dim.Division B
 		ON A.DivisionSID = B.DivisionSID 
 WHERE A.VisitDateTime >= CONVERT(datetime2(0), @StartDateTime)
@@ -60,9 +32,9 @@ select distinct A.VisitSID
 	, method = 'CPT'
 INTO #CPT
 FROM #outpat_visit A
-	INNER JOIN [Src].[Outpat_VProcedure] B
+	INNER JOIN [CDWWork].[Outpat].[VProcedure] B
 		ON A.VisitSID = B.VisitSID
-	inner join ORD_Fix_202309007D.WH_CIH.CPT C				
+	inner join [OPCCCT_CIH].[dflt].CPT C				
 		ON B.cptsid = C.cptsid
 WHERE C.CIHType in (@CIHType, @CIHType1, @CIHType2);
 
@@ -94,7 +66,7 @@ LEFT JOIN CPT_terms_wide term
 	on a.VisitSID = term.VisitSID
 		AND a.CIHType = term.CIHType;
 
-/*** Char4 ***/
+/*** Char4 we're missing CHAR4 for now
 drop table if exists #CHAR4;
 select distinct A.VisitSID
 	, B.NationalChar4 as CHAR4_code
@@ -102,9 +74,10 @@ select distinct A.VisitSID
 	, method = 'CHAR4'
 into #CHAR4 
 from #outpat_visit A 
-	inner join ORD_Fix_202309007D.WH_CIH.CHAR4 B
+	inner join [OPCCCT_CIH].[dflt].CHAR4 B
 		on A.LocationSID = B.LocationSID
 WHERE B.CIHType in (@CIHType, @CIHType1, @CIHType2);
+***/
 
 /*** STOP CODE ***/
 drop table if exists #StopCode;
@@ -114,9 +87,9 @@ select distinct A.VisitSID
 	, method = 'StopCode'
 into #StopCode
 FROM #outpat_visit A 
-	LEFT JOIN ORD_Fix_202309007D.WH_CIH.StopCodes B
+	LEFT JOIN [OPCCCT_CIH].[dflt].StopCodes B
 		on A.PrimaryStopCodeSID = B.StopCodeSID
-	LEFT JOIN ORD_Fix_202309007D.WH_CIH.StopCodes C
+	LEFT JOIN [OPCCCT_CIH].[dflt].StopCodes C
 		on A.SecondaryStopCodeSID = C.StopCodeSID
 WHERE (B.CIHType in (@CIHType, @CIHType1, @CIHType2) 
 	or C.CIHType in (@CIHType, @CIHType1, @CIHType2));
@@ -130,7 +103,7 @@ WITH intermed AS (
 		, L.Inclusions as LN_inclusions
 		, MIN(L.CIHType) OVER (PARTITION BY A.VisitSID) as min_CIHType
 	from #outpat_visit A
-	inner join ORD_Fix_202309007D.WH_CIH.LocationNames L 
+	inner join [OPCCCT_CIH].[dflt].LocationNames L 
 		on A.LocationSID = L.LocationSID
 	WHERE L.CIHType in (@CIHType, @CIHType1, @CIHType2)
 		AND L.GenExcl is null
@@ -155,9 +128,9 @@ WITH intermed AS (
 		, L.Inclusions
 		, MIN(L.CIHType) OVER (PARTITION BY A.VisitSID) as min_CIHType
 	from #outpat_visit A
-	INNER JOIN [Src].[TIU_TIUDocument] B
+	INNER JOIN [CDWWork].[TIU].[TIUDocument] B
 		on A.VisitSID = B.VisitSID
-	INNER JOIN ORD_Fix_202309007D.WH_CIH.NoteTitles L 
+	INNER JOIN [OPCCCT_CIH].[dflt].NoteTitles L 
 		on B.TIUDocumentDefinitionSID = L.TIUDocumentDefinitionSID
 	WHERE L.CIHType in (@CIHType, @CIHType1, @CIHType2)
 		AND L.GenExcl is null 
@@ -231,9 +204,9 @@ select DISTINCT A.VisitSID
 	, L.Inclusions
 	, MIN(L.CIHType) OVER (PARTITION BY A.VisitSID) as min_CIHType
 from #outpat_visit A
-	INNER JOIN [Src].[HF_HealthFactor] B
+	INNER JOIN [CDWWORK].[HF].[HealthFactor] B
 		on A.VisitSID = B.VisitSID
-	INNER JOIN ORD_Fix_202309007D.WH_CIH.HealthFactors L 
+	INNER JOIN [OPCCCT_CIH].[dflt].HealthFactors L 
 		on B.HealthFactorTypeSID = L.HealthFactorTypeSID
 WHERE L.CIHType in (@CIHType, @CIHType1, @CIHType2)
 	AND L.GenExcl is null 
@@ -318,8 +291,8 @@ CREATE TABLE #consolidated_methods (
 	HF_num_terms int,
 	HF_terms nvarchar(4000),
 	HF_inclusions nvarchar(800),
-	CHAR4 int,
-	CHAR4_code nvarchar(25),
+	/*CHAR4 int,
+	CHAR4_code nvarchar(25),*/
 	StopCode int
 );
 
@@ -330,8 +303,8 @@ IF @CIHType in ('Acupuncture')
 	with intermed as (
 		select VisitSID from #CPT
 		union
-		select VisitSID from #CHAR4
-		union
+		/* select VisitSID from #CHAR4
+		union*/
 		select VisitSID from #StopCode
 		union 
 		select VisitSID from #LocName
@@ -345,7 +318,7 @@ IF @CIHType in ('Acupuncture')
 			or F.CIHType = 'Acup-BFA'
 			or G.CIHType = 'Acup-BFA'
 			or H.CIHType = 'Acup-BFA'
-			or I.CIHType = 'Acup-BFA'
+			/*or I.CIHType = 'Acup-BFA'*/
 			or J.CIHType = 'Acup-BFA'
 			THEN 'Acup-BFA' ELSE 'Acup-Trad' END AS CIHType
 		, case when E.VisitSID is not null then 1 else 0 end as 'CPT'
@@ -362,8 +335,8 @@ IF @CIHType in ('Acupuncture')
 		, H.HF_num_terms
 		, H.HF_terms
 		, H.HF_inclusions
-		, case when I.VisitSID is not null then 1 else 0 end as 'CHAR4'
-		, I.CHAR4_code
+		/*, case when I.VisitSID is not null then 1 else 0 end as 'CHAR4'
+		, I.CHAR4_code*/
 		, case when J.VisitSID is not null then 1 else 0 end as 'StopCode'
 	into #cons_visits_acup
 	from intermed A
@@ -371,7 +344,7 @@ IF @CIHType in ('Acupuncture')
 		LEFT JOIN #NT_wide	F	on A.VisitSID = F.VisitSID
 		LEFT JOIN #LocName  G	on A.VisitSID = G.VisitSID
 		LEFT JOIN #HF_wide	H	on A.VisitSID = H.VisitSID
-		LEFT JOIN #CHAR4	I	on A.VisitSID = I.VisitSID
+		/*LEFT JOIN #CHAR4	I	on A.VisitSID = I.VisitSID*/
 		LEFT JOIN #StopCode J	on A.VisitSID = J.VisitSID;
 	PRINT('DID ACUP STUFF')
 	INSERT INTO #consolidated_methods SELECT * FROM #cons_visits_acup;
@@ -381,8 +354,8 @@ ELSE
 	with intermed as (
 		select VisitSID from #CPT
 		union
-		select VisitSID from #CHAR4
-		union
+		/*select VisitSID from #CHAR4
+		union*/
 		select VisitSID from #StopCode
 		union 
 		select VisitSID from #LocName
@@ -407,8 +380,8 @@ ELSE
 		, H.HF_num_terms
 		, H.HF_terms
 		, H.HF_inclusions
-		, case when I.VisitSID is not null then 1 else 0 end as 'CHAR4'
-		, I.CHAR4_code
+		/*, case when I.VisitSID is not null then 1 else 0 end as 'CHAR4'
+		, I.CHAR4_code*/
 		, case when J.VisitSID is not null then 1 else 0 end as 'StopCode'
 	into #cons_visits
 	from intermed A
@@ -416,7 +389,7 @@ ELSE
 		LEFT JOIN #NT_wide	F	on A.VisitSID = F.VisitSID
 		LEFT JOIN #LocName  G	on A.VisitSID = G.VisitSID
 		LEFT JOIN #HF_wide	H	on A.VisitSID = H.VisitSID
-		LEFT JOIN #CHAR4	I	on A.VisitSID = I.VisitSID
+		/*LEFT JOIN #CHAR4	I	on A.VisitSID = I.VisitSID*/
 		LEFT JOIN #StopCode J	on A.VisitSID = J.VisitSID;
 	PRINT('DID NON-ACUP STUFF')
 	INSERT INTO #consolidated_methods SELECT * FROM #cons_visits;
@@ -449,18 +422,19 @@ SELECT DISTINCT C.ScrSSN
 		, HF_num_terms
 		, HF_terms
 		, HF_inclusions		
-		, CHAR4
-		, CHAR4_code
+		/*, CHAR4
+		, CHAR4_code*/
 		, A.StopCode
-		, CASE WHEN CPT = 1 OR NT = 1 OR HF = 1 or CHAR4 = 1 THEN 1 ELSE 0 END AS strong_evid
+		, CASE WHEN CPT = 1 OR NT = 1 OR HF = 1 THEN 1 ELSE 0 END AS strong_evid
+		/*, CASE WHEN CPT = 1 OR NT = 1 OR HF = 1 or /*CHAR4 = 1*/ THEN 1 ELSE 0 END AS strong_evid*/
 		, CASE WHEN LocName = 1 OR A.StopCode = 1 THEN 1 ELSE 0 END AS weak_evid
 INTO #consolidated_methods2
 FROM #consolidated_methods A
 	INNER JOIN #outpat_visit B
 		on A.VisitSID = B.VisitSID
-	INNER JOIN [Src].[SPatient_SPatient] C
+	INNER JOIN CDWWORK.[SPatient].[SPatient] C
 		on B.PatientSID = C.PatientSID
-	LEFT JOIN ORD_Fix_202309007D.WH_CIH.Telehealth TH
+	LEFT JOIN [OPCCCT_CIH].[dflt].Telehealth TH
 		on B.LocationSID = TH.LocationSID
 	LEFT JOIN CDWWork.Dim.StopCode SC1
 		on B.PrimaryStopCodeSID = SC1.StopCodeSID
@@ -478,11 +452,11 @@ DROP TABLE IF EXISTS #location_name_only_exclusions;
 SELECT DISTINCT A.VisitSID 
 INTO #location_name_only_exclusions
 FROM #consolidated_methods3 A
-	INNER JOIN [Src].[TIU_TIUDocument] B
+	INNER JOIN cdwwork.[TIU].[TIUDocument] B
 		on A.VisitSID = B.VisitSID
-	INNER JOIN ORD_Fix_202309007D.WH_CIH.CIHWHLocationOnlyExclusions C
+	INNER JOIN [OPCCCT_CIH].[dflt].CIHWHLocationOnlyExclusions C
 		ON B.TIUDocumentDefinitionSID = C.TIUDocumentDefinitionSID
-WHERE CPT = 0 AND NT = 0 AND LocName = 1 AND HF= 0 AND CHAR4 = 0 AND StopCode = 0
+WHERE CPT = 0 AND NT = 0 AND LocName = 1 AND HF= 0 /*AND CHAR4 = 0*/ AND StopCode = 0
 	AND C.CIHType = @CIHType
 	AND (C.GenExcl is not null OR C.SpecExcl is not null);
 
@@ -497,14 +471,12 @@ INTO #note_title_only_exclusions
 FROM #consolidated_methods3 A
 	INNER JOIN #outpat_visit B
 		on A.VisitSID = B.VisitSID
-	INNER JOIN ORD_Fix_202309007D.WH_CIH.CIHWHNoteTitleOnlyExclusions C
+	INNER JOIN [OPCCCT_CIH].[dflt].CIHWHNoteTitleOnlyExclusions C
 		ON B.LocationSID = C.LocationSID
-WHERE CPT = 0 AND NT = 1 AND LocName = 0 AND HF= 0 AND CHAR4 = 0 AND StopCode = 0
+WHERE CPT = 0 AND NT = 1 AND LocName = 0 AND HF= 0 /*AND CHAR4 = 0*/ AND StopCode = 0
 	AND C.CIHType = @CIHType
 	AND (C.GenExcl is not null OR C.SpecExcl is not null);
 
-DROP TABLE IF EXISTS WH_CIH.temp_consolidated_methods;
-SELECT * INTO WH_CIH.temp_consolidated_methods FROM #consolidated_methods_excl1
+DROP TABLE IF EXISTS [OPCCCT_CIH].[dflt].temp_consolidated_methods;
+SELECT * INTO [OPCCCT_CIH].[dflt].Acupuncture_Visits_FY17_FY20 FROM #consolidated_methods_excl1
 WHERE VisitSID NOT IN (SELECT DISTINCT VisitSID FROM #note_title_only_exclusions);
-
-END
