@@ -1,0 +1,67 @@
+# -------------------------
+# Jupyter
+# -------------------------
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# -------------------------
+# Python
+# -------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# -------------------------
+# Data files (often too large for Git)
+# -------------------------
+*.csv
+*.xlsx
+*.xls
+*.parquet
+*.feather
+*.pkl
+*.pickle
+
+# SQL backups / exports
+*.bak
+*.sql.bak
+
+# -------------------------
+# Credentials & config (never commit these!)
+# -------------------------
+*.env
+.env.*
+config.ini
+secrets.json
+credentials.json
+*.key
+*.pem
+connection_strings.txt
+
+# -------------------------
+# OS clutter
+# -------------------------
+.DS_Store          # Mac
+Thumbs.db          # Windows
+Desktop.ini        # Windows
+$RECYCLE.BIN/
+
+# -------------------------
+# Editors & IDEs
+# -------------------------
+.vscode/
+.idea/
+*.suo
+*.user

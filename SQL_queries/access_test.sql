@@ -25,5 +25,5 @@ SELECT TOP (10) [ScrSSN]
       ,[strong_evid]
       ,[weak_evid]
   INTO [OPCCCT_CIH].[Dflt].[access_test]
-  FROM [OPCCCT_CIH].[Dflt].[temp_consolidated_methods]
+  FROM [OPCCCT_CIH].[Dflt].[acupuncture_patient_list]
 

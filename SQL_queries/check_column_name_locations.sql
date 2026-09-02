@@ -5,7 +5,7 @@ SELECT
 FROM CDWWork2.sys.views AS t
 JOIN CDWWork2.sys.columns AS c
     ON c.object_id = t.object_id
-WHERE t.name LIKE '%CDS%'
+WHERE t.name LIKE '%visn%' or c.name LIKE '%visn%'
 ORDER BY
     schema_name,
     table_name;

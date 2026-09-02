@@ -149,7 +149,7 @@ SELECT
 -- Now trivially safe: TradQualifies/BfaQualifies are single bits per
 -- (sta6a, LocationName), so this FULL JOIN cannot fan out regardless
 -- of how many patterns originally matched at a location.
-DROP TABLE IF EXISTS OPCCCT_cih.dflt.LocationName_filter;
+DROP TABLE IF EXISTS OPCCCT_cih.dflt.acupuncture_locationName_filter;
 SELECT
     COALESCE(t.sta6a, b.sta6a) AS sta6a,
     COALESCE(t.LocationName, b.LocationName) AS LocationName,
@@ -157,7 +157,7 @@ SELECT
     CONVERT(date, '2050-01-01') AS EndDate,
     ISNULL(t.TradQualifies, 0) AS TradQualifies,
     ISNULL(b.BfaQualifies, 0) AS BfaQualifies
-INTO OPCCCT_cih.dflt.LocationName_filter
+INTO OPCCCT_cih.dflt.acupuncture_locationName_filter
 FROM #LNAcupTrad t
     FULL JOIN #LNAcupBFA b
         ON t.sta6a = b.sta6a AND t.LocationName = b.LocationName;
@@ -167,7 +167,7 @@ FROM #LNAcupTrad t
 -- thousands expected. If this is in the millions, STOP before
 -- proceeding to #temp_viz - something is still fanning out.
 SELECT COUNT(*) AS LocationName_filter_RowCount
-FROM OPCCCT_cih.dflt.LocationName_filter;
+FROM OPCCCT_cih.dflt.acupuncture_locationName_filter;
 
 DROP TABLE IF EXISTS #LNGenExcl;
 DROP TABLE IF EXISTS #LNAcupTExcl;
@@ -305,13 +305,13 @@ INTO #temp_viz
 FROM [OPCCCT_Analytics].[DOEx].[WholeHealth_1_VISITS] a
     LEFT JOIN #HFPerVisit hfv ON a.VisitSID = hfv.VisitSID AND a.PatientSID = hfv.PatientSID
     LEFT JOIN #CPTPerVisit cpv ON a.VisitSID = cpv.VisitSID AND a.PatientSID = cpv.PatientSID
-    LEFT JOIN OPCCCT_cih.dflt.LocationName_filter ln ON a.sta6a = ln.sta6a AND a.LocationName = ln.LocationName
+    LEFT JOIN OPCCCT_cih.dflt.acupuncture_locationName_filter ln ON a.sta6a = ln.sta6a AND a.LocationName = ln.LocationName
 WHERE a.VisitDateTime >= '2020-10-01';
 
 /******************************************************************************/
 /* STEP 5: Final acupuncture visit flags - one row per visit, as intended     */
 /******************************************************************************/
-DROP TABLE IF EXISTS opccct_cih.dflt.acupuncture_vists_opccct_visit_info;
+DROP TABLE IF EXISTS opccct_cih.dflt.ALL_ACUP_VA_encounters;
 SELECT *,
     CASE WHEN CPT_Acup IN ('Acup-Trad','Acup-Both')
            OR Char4_Acup IN ('Acup-Trad','Acup-Both')
@@ -334,7 +334,7 @@ SELECT *,
     CASE WHEN HealthFactor_Acup IN ('Acup-BFA','Acup-Both') THEN 1 ELSE 0 END AS Source_HF_BFA,
     CASE WHEN Location_Acup IN ('Acup-Trad','Acup-Both') THEN 1 ELSE 0 END AS Source_Location_Trad,
     CASE WHEN Location_Acup IN ('Acup-BFA','Acup-Both') THEN 1 ELSE 0 END AS Source_Location_BFA
-INTO opccct_cih.dflt.acupuncture_vists_opccct_visit_info
+INTO opccct_cih.dflt.ALL_ACUP_VA_encounters
 FROM #temp_viz
 WHERE CPT_Acup IN ('Acup-Both','Acup-Trad','Acup-BFA')
    OR Char4_Acup IN ('Acup-Both','Acup-Trad','Acup-BFA')
