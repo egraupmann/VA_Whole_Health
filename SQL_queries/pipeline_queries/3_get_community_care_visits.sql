@@ -1,3 +1,10 @@
+/******************************************************************************
+The purpose of this script is to get the community care referral data from both
+the VISTA and MILLENNIUM systems. We don't know whether someone referred to get
+acupuncture actually did but it's the best we currently have because we don't 
+have access to the payment data right now.
+******************************************************************************/
+
 
 /******************************************************************************/
 /* Community Care encounter: one row per Consult                */
@@ -97,7 +104,7 @@ WHERE a.CreateDateTime >= '2020-10-01' and a.ServiceTypeRequested = 'Community C
     and (c.SourceVocabulary in ('ICD-10-CM') or c.SourceVocabulary is Null)
 order by a.ReferralSID;
 
-/******Refine to keep only the diagnoses with the earliest dat
+/******Refine to keep only the diagnoses with the earliest date
 These seem to be the priamr ydiagnoses************************/
 drop table if exists OPCCCT_CIH.dflt.MILL_comm_care_orders;
 
@@ -163,9 +170,3 @@ select a.fiscalyear, VISTA_CC_Referrals, MILL_CC_Referrals
 from #VISTA_CC_ReferralCounts a
     left join #MILL_CC_ReferralCounts b on a.FiscalYear = b.FiscalYear
 order by FiscalYear;
-
-
-
-
-
-

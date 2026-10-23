@@ -153,7 +153,7 @@ DROP TABLE IF EXISTS OPCCCT_cih.dflt.acupuncture_locationName_filter;
 SELECT
     COALESCE(t.sta6a, b.sta6a) AS sta6a,
     COALESCE(t.LocationName, b.LocationName) AS LocationName,
-    CONVERT(date, '2022-10-01') AS StartDate,
+    CONVERT(date, '2020-10-01') AS StartDate,
     CONVERT(date, '2050-01-01') AS EndDate,
     ISNULL(t.TradQualifies, 0) AS TradQualifies,
     ISNULL(b.BfaQualifies, 0) AS BfaQualifies

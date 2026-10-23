@@ -1,4 +1,11 @@
 /**********************************************************************
+The purpose of this script is to pull demographic data and other descriptors of 
+patients for patients getting care at facilities using the Millennium data 
+system. It includes all diagnoses for MILL patients as well as vital signs and 
+mental health factors
+******************************************************************************/
+
+/**********************************************************************
 [CDWWork2].[Mill].[PatientEncounterAll] seems like maybe the most promising lead
 for getting mental health and vital signs. I think getting the community care info
 figured out is more important right now though
@@ -25,7 +32,7 @@ FROM CDWWork.Patient.Patient AS P
 		ON P.PatientSID = sp.PatientSID
 	INNER JOIN (SELECT DISTINCT patienticn, patientsid
 				FROM OPCCCT_CIH.dflt.ALL_ACUP_VA_encounters
-				WHERE VisitDateTime >= '2021-10-01') AS ACU
+				WHERE VisitDateTime >= '2020-10-01') AS ACU
 		ON P.PatientSID = ACU.PatientSID AND p.PatientICN = ACU.PatientICN
 	INNER JOIN CDWWork.Veteran.ADRPerson AS VET
 		ON VET.ADRPersonICN = P.PatientICN
@@ -50,7 +57,7 @@ into opccct_cih.dflt.MILL_acupuncture_patient_list
   FROM [CDWWork2].[SVeteranMill].[SPerson] as p
     INNER JOIN (select distinct patientsid, PatientICN
 				from OPCCCT_CIH.dflt.ALL_ACUP_VA_encounters
-				where VisitDateTime >= '2021-10-01') AS ACU
+				where VisitDateTime >= '2020-10-01') AS ACU
 		ON P.PersonSID = ACU.PatientSID 
 where [CDWPossibleTestPatientFlag]='N'
 
@@ -122,7 +129,8 @@ CREATE INDEX IX_acu_patienticn_acu_only
 /********************************************
 STEP 2: This table is the millennium diagnosis queries
 ********************************************/
-drop table if exists opccct_cih.dflt.MILL_acu_user_dianoses
+drop table if exists opccct_cih.dflt.MILL_acu_user_diagnoses;
+
 SELECT acu.PatientICN
       ,[EncounterSID]
       ,[PersonSID]
@@ -137,13 +145,13 @@ into opccct_cih.dflt.MILL_acu_user_diagnoses
   FROM [CDWWork2].[Mill].[PatientDiagnosisAll] as p
     	INNER JOIN (select distinct patientsid,visitsid,PatientICN
 				from OPCCCT_CIH.dflt.ALL_ACUP_VA_encounters
-				where VisitDateTime >= '2021-10-01') AS ACU
+				where VisitDateTime >= '2020-10-01') AS ACU
 		ON P.PersonSID = ACU.PatientSID 
             and CONCAT(FORMAT(p.diagnosisdatetime, 'yyMMdd'), CAST(p.encounterSID AS VARCHAR(20))) = CAST(acu.visitSID AS VARCHAR(20))
   where DiagnosisDateTime >= '2020-10-01' and SourceVocabulary in ('ICD-10-CM');
 
-  CREATE INDEX IX_acu_patienticn_acu_only
-	ON OPCCCT_CIH.dflt.MILL_acu_user_diagnoses (PatientICN)
+  CREATE INDEX IX_acu_patienticn_acu_only_mill
+	ON OPCCCT_CIH.dflt.MILL_acu_user_diagnoses (PatientICN);
 
   -- example visitSID in Irad's data      2104131800001157497
   -- example encounterSID in the diagnosis data 1800000217826
@@ -156,10 +164,6 @@ STEP 3: Combine into longitudinal diagnosis table.
 VISTA outpatient diagnoses (from Step 1) UNION ALL Millennium diagnoses
 (mill_acu_user_dianoses). A SourceSystem column is added so the two identifier
 spaces / vocabularies can be told apart downstream.
-
-Inpatient is still excluded on the VISTA side. See the CONFIRM notes below on
-the Millennium side — Millennium diagnoses can be inpatient, so filter/label
-accordingly.
 ******************************************************************************/
 DROP TABLE IF EXISTS OPCCCT_CIH.dflt.acupuncture_all_diagnoses_acu_only;
 
@@ -203,6 +207,9 @@ WITH agg AS (
 		,MIN(DiagnosisDateTime) AS FirstDiagnosedDate
 		,MAX(DiagnosisDateTime) AS MostRecentDiagnosedDate
 		,COUNT(*) AS TimesDiagnosedTotal
+		,sum(case when DiagnosisDateTime >= '2025-09-01' then 1 else 0 end) as Num_Diagnoses_in_Last_Year
+		,min(case when DiagnosisDateTime >= '2025-09-01' then DiagnosisDateTime end) as First_Diagnosis_in_Last_Year
+		,max(case when DiagnosisDateTime >= '2025-09-01' then DiagnosisDateTime end) as Last_Diagnosis_in_Last_Year
 		,MAX(CASE WHEN PrimarySecondary = 'P' THEN 1 ELSE 0 END) AS EverPrimaryFlag
 	FROM OPCCCT_CIH.dflt.acupuncture_all_diagnoses_acu_only
 	GROUP BY PatientICN, PatientSID, SourceSystem, ICD10Code
@@ -239,6 +246,9 @@ SELECT
 	,a.ICD10Code
 	,a.FirstDiagnosedDate
 	,a.MostRecentDiagnosedDate
+	,a.Num_Diagnoses_in_Last_Year
+	,a.First_Diagnosis_in_Last_Year
+	,a.Last_Diagnosis_in_Last_Year
 	,a.TimesDiagnosedTotal
 	,a.EverPrimaryFlag
 	,ro.PrimarySecondary AS MostRecentPrimarySecondary
@@ -251,10 +261,12 @@ INNER JOIN ranked_overall AS ro
 	ON a.PatientICN = ro.PatientICN
 	AND a.PatientSID = ro.PatientSID
 	AND a.ICD10Code = ro.ICD10Code
-	AND ro.rn = 1;
+	AND ro.rn = 1
 
 CREATE INDEX IX_acu_diag_summary_patienticn_acu_only
 	ON OPCCCT_CIH.dflt.COMBINED_acupuncture_diagnoses_VA_acu_visits_only (PatientICN);
+
+
 
 /***************************************************************
 Vital signs / pain-score data (visit-only: same PatientSID + LocationSID +
