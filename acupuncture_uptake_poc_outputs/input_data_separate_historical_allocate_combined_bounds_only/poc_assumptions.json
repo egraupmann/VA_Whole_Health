@@ -1,0 +1,68 @@
+{
+  "data_mode": "input_data",
+  "projection_mode": "separate",
+  "growth_source": "historical",
+  "baseline_FY": 2026,
+  "forecast_FYs": [
+    2027,
+    2028,
+    2029,
+    2030,
+    2031,
+    2032,
+    2033,
+    2034,
+    2035,
+    2036
+  ],
+  "patients": 5231037,
+  "endpoint_odds_multipliers": {
+    "Reference: unchanged uptake": {
+      "vamc": 1.0,
+      "community_care": 1.0
+    },
+    "Historical trend: FY21 onward": {
+      "vamc": 3.257520028231722,
+      "community_care": 1.7033658240235627
+    },
+    "Recent trend: FY24 onward": {
+      "vamc": 0.9306425028895589,
+      "community_care": 1.6506370131523966
+    }
+  },
+  "separate_baseline_source": "allocate_combined",
+  "setting_mix": {
+    "vamc": 0.562242522790733,
+    "community_care": 0.5027566950000237,
+    "both": 0.06499921779075665
+  },
+  "setting_mix_source": "Baseline FY historical unique-user counts",
+  "historical_baseline_population": 5233835,
+  "historical_denominator_differs": true,
+  "overlap_method": "bounds_only",
+  "overlap_known_at_baseline": true,
+  "baseline_expected_users_by_setting": {
+    "vamc": 116317.83671146177,
+    "community_care": 104011.29189649195,
+    "combined_unique": 206881.9628478285
+  },
+  "highest_tested_peak_by_setting": {
+    "community_care": 169530.73275879718,
+    "vamc": 330499.87687836203
+  },
+  "definition": "Highest conditional expected annual count in tested scenarios; overlap limits are not prediction intervals.",
+  "assumptions": [
+    "Broad eligibility is accepted; population and patient profiles stay fixed.",
+    "Historical log-odds slopes, if used, are extrapolated from annual observations and anchored to supplied baseline probabilities.",
+    "Combined-probability allocation, if used, assumes identical setting mix across patient profiles.",
+    "VAMC and Community Care counts can overlap and must not be added to count unique people.",
+    "Any fixed future overlap fraction is an assumption, not an estimated switching or overlap process.",
+    "Counts are not visits and must not be summed across fiscal years for unique five-year users.",
+    "Calibration and representative sampling remain necessary for useful probability sums.",
+    "No deaths, entry/exit, population growth, access intervention, capacity constraints or uncertainty intervals are modeled."
+  ],
+  "data_insufficient": [
+    "Full-availability demand, willingness and setting-specific patient preferences when probabilities are allocated.",
+    "Clinical validity, decision impact, patient benefit and resource optimization."
+  ]
+}

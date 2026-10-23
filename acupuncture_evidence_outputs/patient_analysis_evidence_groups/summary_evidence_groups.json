@@ -1,0 +1,83 @@
+{
+  "data_mode": "input_data",
+  "interpretation": "Current-utilization propensity; not a maximum or initiation forecast.",
+  "validation": "Nested stratified cross-validation; conditional on the supplied condition list.",
+  "use_counts": false,
+  "conditions": 98,
+  "model_mode": "evidence_groups",
+  "clinical_predictors": "Counts of distinct recorded conditions per evidence group",
+  "evidence_group_labels": [
+    "Group A - High/Strong",
+    "Group A - Moderate",
+    "Group A - Low/Very Low",
+    "Group B",
+    "Group C",
+    "Group D"
+  ],
+  "unmapped_conditions": [],
+  "mapped_conditions": 98,
+  "patients_with_unmapped_condition": 0,
+  "evidence_group_patients_overlap": true,
+  "evidence_group_reference": null,
+  "evidence_group_effect_unit": "One additional distinct condition within the same group",
+  "feature_columns": [
+    "age_bucket",
+    "gender",
+    "race_mod",
+    "rurality",
+    "egcount__1",
+    "egcount__2",
+    "egcount__3",
+    "egcount__4",
+    "egcount__5",
+    "egcount__6"
+  ],
+  "age_encoding": "categorical_buckets",
+  "age_buckets": [
+    "<35",
+    "35-44",
+    "45-54",
+    "55-64",
+    "65-74",
+    "75+"
+  ],
+  "reporting_references": {
+    "age_bucket": "<35",
+    "rurality": "6",
+    "gender": "Male",
+    "race": "WHITE"
+  },
+  "missing_age": 0,
+  "missing_rurality": 0,
+  "out_of_fold_metrics": {
+    "patients": 5231037,
+    "observed_users": 206968,
+    "sum_predicted_probabilities": 207100.57625991828,
+    "observed_use_rate": 0.03956538636603029,
+    "mean_predicted_probability": 0.03959073053008768,
+    "roc_auc": 0.7798298674295698,
+    "average_precision": 0.14113624917570514,
+    "brier_score": 0.036284683861246406,
+    "log_loss": 0.14771888223882165
+  },
+  "current_nonusers": 5024069,
+  "nonuser_propensity_sum_NOT_new_user_forecast": 187378.0229741803,
+  "outer_fold_C": [
+    0.1,
+    0.1,
+    0.01,
+    1.0,
+    0.01
+  ],
+  "final_C": 0.01,
+  "limitations": [
+    "If selected using these outcomes, the supplied condition catalog is not independently validated.",
+    "Evidence labels are externally supplied metadata, not validated treatment benefit.",
+    "Group-mode slopes assume a common log-odds effect per additional condition within each group.",
+    "Group membership overlaps; group totals must not be added.",
+    "Counts/conditions must precede the outcome and exclude acupuncture-generated records.",
+    "Probability sums require representative sampling, comparable access and calibration.",
+    "No maximum, initiation forecast, uncertainty interval, or causal expansion scenario is estimated.",
+    "Clinical validity, decision impact, patient benefit and resource optimization: Data Insufficient."
+  ]
+}

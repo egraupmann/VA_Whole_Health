@@ -1,0 +1,35 @@
+{
+  "data_mode": "input_data",
+  "interpretation": "Current-utilization propensity; not a maximum or initiation forecast.",
+  "validation": "Nested stratified cross-validation; conditional on the supplied condition list.",
+  "use_counts": true,
+  "conditions": 21,
+  "out_of_fold_metrics": {
+    "patients": 3670694,
+    "observed_users": 208762,
+    "sum_predicted_probabilities": 208748.56982678515,
+    "observed_use_rate": 0.05687262408688929,
+    "mean_predicted_probability": 0.05686896533102055,
+    "roc_auc": 0.7931849850124137,
+    "average_precision": 0.22163641772215145,
+    "brier_score": 0.04909355232970141,
+    "log_loss": 0.18672008640942261
+  },
+  "current_nonusers": 3461932,
+  "nonuser_propensity_sum_NOT_new_user_forecast": 177715.04622773497,
+  "outer_fold_C": [
+    1.0,
+    1.0,
+    1.0,
+    0.1,
+    1.0
+  ],
+  "final_C": 1.0,
+  "limitations": [
+    "Condition selection from the same outcomes is not independently validated.",
+    "Counts/conditions must precede the outcome and exclude acupuncture-generated records.",
+    "Probability sums require representative sampling, comparable access and calibration.",
+    "No maximum, initiation forecast, uncertainty interval, or causal expansion scenario is estimated.",
+    "Clinical validity, decision impact, patient benefit and resource optimization: Data Insufficient."
+  ]
+}
